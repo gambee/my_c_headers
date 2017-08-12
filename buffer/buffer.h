@@ -6,18 +6,22 @@
  * Description: Buffer data structure for i/o in C.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
+#include <stdlib.h> //needed for memory management 
 
-#ifndef BUF_SIZE
-#define BUF_SIZE 10
+#ifdef BUF_DEBUG
+#	ifndef BUF_SIZE
+#	define BUF_SIZE 8	//buffer node sizes for debugging
+#	endif				//Note: node size should be 16 in x64
+#else
+#	ifndef BUF_SIZE
+#	define BUF_SIZE 1016	//buffer node sizes in performance level code 
+#	endif					//Note: node size should be 1024 in x64
 #endif
 
 struct BUF_node
 {
+	struct BUF_node* next; //placed in front to enforce alignment to ptr size
 	char data[BUF_SIZE];
-	struct BUF_node* next;
 };
 
 struct BUF_buffer
@@ -26,20 +30,25 @@ struct BUF_buffer
 	struct BUF_node *front, *back;
 };
 
-int BUF_append_node(struct BUF_buffer *buf)
+
+/* Function: BUF_append_node
+ * -------------------------
+ */
+void BUF_append_node(struct BUF_buffer *buf)
 {
 	struct BUF_node *tmp;
-	if(!buf)
-		return 1; //NULL ptr passed
-	
+
 	tmp = (struct BUF_node*) malloc(sizeof(struct BUF_node));
 	tmp->next = NULL;
 	buf->back_index = 0;
 
-	buf->back = buf->back ? buf->back->next = tmp : tmp;
-	return 0;
+	buf->back = buf->back ? (buf->back->next = tmp) : tmp;
+	buf->front ? 0 : (buf->front = buf->back);
 }
 
+/* Function: BUF_init
+ * ------------------
+ */
 void BUF_init(struct BUF_buffer *to_init)
 {
 	to_init->front_index = 0;
@@ -48,6 +57,9 @@ void BUF_init(struct BUF_buffer *to_init)
 	to_init->back = NULL;
 }
 
+/* Function: BUF_line_len
+ * ----------------------
+ */
 int BUF_line_len(struct BUF_buffer *buf)
 {
 	/* returns number of characters until, but not including, the next
@@ -77,6 +89,9 @@ int BUF_line_len(struct BUF_buffer *buf)
 	return (cur->data[i] == '\n') ? count : -count;
 }
 
+/* Function: BUF_getc
+ * ------------------
+ */
 int BUF_getc(struct BUF_buffer *buf)
 {
 	struct BUF_node *tmp;
@@ -144,41 +159,28 @@ int BUF_puts(struct BUF_buffer *buf, char *str)
 }
 */
 
+/* Function: BUF_putc
+ * ------------------
+ */
 int BUF_putc(struct BUF_buffer *buf, char c)
 {
-	/* returns zero on success */
-
+	/* Returns zero on success, non-zero otherwise. */
 	if(!buf)
 		return -1; // NULL ptr passed; exit in error immediately
 
-	if(buf->back)
-	{
-		if(buf->back_index < BUF_SIZE)
-		{
-			buf->back->data[buf->back_index++] = c;
-		}
-		else
-		{
-			buf->back->next = (struct BUF_node*) malloc(sizeof(struct BUF_node));
-			buf->back = buf->back->next;
-			buf->back->next = NULL;
-			buf->back->data[0] = c;
-			buf->back_index = 1;
-		}
-	}
-	else
-	{
-		buf->back = (struct BUF_node*) malloc(sizeof(struct BUF_node));
-		buf->front = buf->back;
-		buf->front_index = 0;
-		buf->back->next = NULL;
-		buf->back->data[0] = c;
-		buf->back_index = 1;
-	}
-
-	return 0; //success!
+	(!buf->back || (buf->back_index >= BUF_SIZE)) ? BUF_append_node(buf) : 0;
+	buf->back->data[buf->back_index++] = c;
+	return 0;
 }
 
+#ifdef BUF_DEBUG
+
+#include <ctype.h>
+#include <stdio.h>
+
+/* Function: BUF_print_all
+ * -----------------------
+ */
 int BUF_print_all(struct BUF_buffer *buf)
 {
 	struct BUF_node *cur = NULL;
@@ -258,8 +260,4 @@ int BUF_print_all(struct BUF_buffer *buf)
 	return 0;
 }
 
-
-
-
-
-
+#endif //def BUF_DEBUG
