@@ -1,29 +1,50 @@
-/* buffer.h
- *
+/* buffer.h   
+ * 			    
  * Max Gambee
  * Copyright 2017
  *
  * Description: Buffer data structure for i/o in C.
  */
 
-#include <stdlib.h> //needed for memory management 
+
+
+
+/* ===================================== *
+ * Section: Includes					 *
+ * ===================================== */
+
+#include <stdlib.h>			//needed for memory management 
+
+/* ===================================== *
+ * Section: Defines 					 *
+ * ===================================== */
 
 #ifdef BUF_DEBUG
 #	ifndef BUF_SIZE
-#	define BUF_SIZE 8	//buffer node sizes for debugging
-#	endif				//Note: node size should be 16 in x64
+#	define BUF_SIZE 8		//buffer node sizes for debugging
+#	endif					//Note: node size should be 16 in x64
 #else
 #	ifndef BUF_SIZE
 #	define BUF_SIZE 1016	//buffer node sizes in performance level code 
 #	endif					//Note: node size should be 1024 in x64
 #endif
 
+/* ===================================== *
+ * Section: Structures 					 *
+ * ===================================== */
+
+/* ------------------------------------- * 
+ * Structure: BUF_node
+ * ------------------------------------- */
 struct BUF_node
 {
 	struct BUF_node* next; //placed in front to enforce alignment to ptr size
 	char data[BUF_SIZE];
 };
 
+/* ------------------------------------- * 
+ * Structure: BUF_buffer
+ * ------------------------------------- */
 struct BUF_buffer
 {
 	unsigned int front_index, back_index;
@@ -31,9 +52,14 @@ struct BUF_buffer
 };
 
 
-/* Function: BUF_append_node
- * -------------------------
- */
+/* ===================================== *
+ * Section: Functions					 *
+ * ===================================== */
+
+
+/* ------------------------------------- * 
+ * Function: BUF_append_node
+ * ------------------------------------- */
 void BUF_append_node(struct BUF_buffer *buf)
 {
 	struct BUF_node *tmp;
@@ -46,9 +72,9 @@ void BUF_append_node(struct BUF_buffer *buf)
 	buf->front ? 0 : (buf->front = buf->back);
 }
 
-/* Function: BUF_init
- * ------------------
- */
+/* ------------------------------------- * 
+ * Function: BUF_init
+ * ------------------------------------- */
 void BUF_init(struct BUF_buffer *to_init)
 {
 	to_init->front_index = 0;
@@ -57,9 +83,9 @@ void BUF_init(struct BUF_buffer *to_init)
 	to_init->back = NULL;
 }
 
-/* Function: BUF_line_len
- * ----------------------
- */
+/* ------------------------------------- * 
+ * Function: BUF_line_len
+ * ------------------------------------- */
 int BUF_line_len(struct BUF_buffer *buf)
 {
 	/* returns number of characters until, but not including, the next
@@ -89,9 +115,9 @@ int BUF_line_len(struct BUF_buffer *buf)
 	return (cur->data[i] == '\n') ? count : -count;
 }
 
-/* Function: BUF_getc
- * ------------------
- */
+/* ------------------------------------- * 
+ * Function: BUF_getc
+ * ------------------------------------- */
 int BUF_getc(struct BUF_buffer *buf)
 {
 	struct BUF_node *tmp;
@@ -122,46 +148,17 @@ int BUF_getc(struct BUF_buffer *buf)
 	return ret;
 }
 
-/*
-int BUF_puts(struct BUF_buffer *buf, char *str)
-{
-	if(!buf)
-		return 1; //NULL ptr passed
-
-	if(buf->back)
-	{
-		if(buf->back_index < BUF_SIZE)
-		{
-			buf->back->data[buf->back_index++] = c;
-		}
-		else
-		{
-			buf->back->next = (struct BUF_node*) malloc(sizeof(struct BUF_node));
-			buf->back = buf->back->next;
-			buf->back->next = NULL;
-			buf->back->data[0] = c;
-			buf->back_index = 1;
-			++ret;
-		}
-	}
-	else
-	{
-		buf->back = (struct BUF_node*) malloc(sizeof(struct BUF_node));
-		buf->front = buf->back;
-		buf->front_index = 0;
-		buf->back->next = NULL;
-		buf->back->data[0] = c;
-		buf->back_index = 1;
-		++ret;
-	}
-
-	return 0;
-}
-*/
-
-/* Function: BUF_putc
- * ------------------
- */
+/* -------------------------------------------------------------------------- *
+ * Function: BUF_putc
+ *		Description: Enqueues character 'c' into the buffer pointed to by 'buf'.
+ *		Arguments:
+ *			buf	: Address of the buffer to enqueue to.
+ *			c	: Character to enqueue.
+ *		Return Value: int- 
+ *			-1		: Failure :: Because buf == NULL.
+ *			(int) c	: Success :: Returns the value of the enqueued character
+ *								 for convenient use of BUF_putc in expressions.
+ * -------------------------------------------------------------------------- */
 int BUF_putc(struct BUF_buffer *buf, char c)
 {
 	/* Returns zero on success, non-zero otherwise. */
@@ -170,17 +167,34 @@ int BUF_putc(struct BUF_buffer *buf, char c)
 
 	(!buf->back || (buf->back_index >= BUF_SIZE)) ? BUF_append_node(buf) : 0;
 	buf->back->data[buf->back_index++] = c;
-	return 0;
+	return (int) c;
 }
 
-#ifdef BUF_DEBUG
+/* ------------------------------------- * 
+ * Function: BUF_puts
+ * ------------------------------------- */
+int BUF_puts(struct BUF_buffer *buf, char *str)
+{
+	int i = 0;
+	char *cur = str;
 
+	if(!buf || !str)
+		return -1; //NULL ptr(s) passed, exit in error immediately
+
+	for(i = 0, cur = str; BUF_putc(buf, *cur); i++, cur++);
+
+	return i;
+}
+
+#ifdef BUF_DEBUG //then provide these functions:
+
+//debug includes:
 #include <ctype.h>
 #include <stdio.h>
 
-/* Function: BUF_print_all
- * -----------------------
- */
+/* ------------------------------------- * 
+ * Function: BUF_print_all
+ * ------------------------------------- */
 int BUF_print_all(struct BUF_buffer *buf)
 {
 	struct BUF_node *cur = NULL;
