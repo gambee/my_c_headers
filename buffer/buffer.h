@@ -26,12 +26,55 @@ struct BUF_buffer
 	struct BUF_node *front, *back;
 };
 
+int BUF_append_node(struct BUF_buffer *buf)
+{
+	struct BUF_node *tmp;
+	if(!buf)
+		return 1; //NULL ptr passed
+	
+	tmp = (struct BUF_node*) malloc(sizeof(struct BUF_node));
+	tmp->next = NULL;
+	buf->back_index = 0;
+
+	buf->back = buf->back ? buf->back->next = tmp : tmp;
+	return 0;
+}
+
 void BUF_init(struct BUF_buffer *to_init)
 {
 	to_init->front_index = 0;
 	to_init->back_index = 0;
 	to_init->front = NULL;
 	to_init->back = NULL;
+}
+
+int BUF_line_len(struct BUF_buffer *buf)
+{
+	/* returns number of characters until, but not including, the next
+	 * end-of-line character, null-terminating character, or back of stream.
+	 * This integer is positive if the end-of-line character is reached, and
+	 * negative in the other two cases. It returns zero if the line len is zero
+	 * or if buf is a NULL pointer.
+	 */
+
+	struct BUF_node *cur;
+	int i, count = 0;
+
+	if(!buf)
+		return 0; //exit immediately if invalid NULL pointer is passed
+
+	cur = buf->front;
+	if(cur == buf->back)
+		for(i = 0; i < buf->back_index && cur->data[i] != '\n' && cur->data[i]; i++, count++);
+	else
+	{
+		for(i = buf->front_index; i < BUF_SIZE && cur->data[i] != '\n' && cur->data[i]; i++, count++);
+		for(cur=cur->next; cur != buf->back; cur=cur->next)
+			for(i = 0; i < BUF_SIZE && cur->data[i] != '\n' && cur->data[i]; i++, count++);
+		for(i = 0; i < buf->back_index && cur->data[i] != '\n' && cur->data[i]; i++, count++);
+
+	}
+	return (cur->data[i] == '\n') ? count : -count;
 }
 
 int BUF_getc(struct BUF_buffer *buf)
@@ -64,33 +107,22 @@ int BUF_getc(struct BUF_buffer *buf)
 	return ret;
 }
 
-int BUF_putc(struct BUF_buffer *buf, char c)
+/*
+int BUF_puts(struct BUF_buffer *buf, char *str)
 {
-	int ret = 0; //number of new nodes (m)allocated, negative if failed
+	if(!buf)
+		return 1; //NULL ptr passed
 
-	if(buf)
+	if(buf->back)
 	{
-		if(buf->back)
+		if(buf->back_index < BUF_SIZE)
 		{
-			if(buf->back_index < BUF_SIZE)
-			{
-				buf->back->data[buf->back_index++] = c;
-			}
-			else
-			{
-				buf->back->next = (struct BUF_node*) malloc(sizeof(struct BUF_node));
-				buf->back = buf->back->next;
-				buf->back->next = NULL;
-				buf->back->data[0] = c;
-				buf->back_index = 1;
-				++ret;
-			}
+			buf->back->data[buf->back_index++] = c;
 		}
 		else
 		{
-			buf->back = (struct BUF_node*) malloc(sizeof(struct BUF_node));
-			buf->front = buf->back;
-			buf->front_index = 0;
+			buf->back->next = (struct BUF_node*) malloc(sizeof(struct BUF_node));
+			buf->back = buf->back->next;
 			buf->back->next = NULL;
 			buf->back->data[0] = c;
 			buf->back_index = 1;
@@ -99,10 +131,52 @@ int BUF_putc(struct BUF_buffer *buf, char c)
 	}
 	else
 	{
-		--ret;
+		buf->back = (struct BUF_node*) malloc(sizeof(struct BUF_node));
+		buf->front = buf->back;
+		buf->front_index = 0;
+		buf->back->next = NULL;
+		buf->back->data[0] = c;
+		buf->back_index = 1;
+		++ret;
 	}
 
-	return ret;
+	return 0;
+}
+*/
+
+int BUF_putc(struct BUF_buffer *buf, char c)
+{
+	/* returns zero on success */
+
+	if(!buf)
+		return -1; // NULL ptr passed; exit in error immediately
+
+	if(buf->back)
+	{
+		if(buf->back_index < BUF_SIZE)
+		{
+			buf->back->data[buf->back_index++] = c;
+		}
+		else
+		{
+			buf->back->next = (struct BUF_node*) malloc(sizeof(struct BUF_node));
+			buf->back = buf->back->next;
+			buf->back->next = NULL;
+			buf->back->data[0] = c;
+			buf->back_index = 1;
+		}
+	}
+	else
+	{
+		buf->back = (struct BUF_node*) malloc(sizeof(struct BUF_node));
+		buf->front = buf->back;
+		buf->front_index = 0;
+		buf->back->next = NULL;
+		buf->back->data[0] = c;
+		buf->back_index = 1;
+	}
+
+	return 0; //success!
 }
 
 int BUF_print_all(struct BUF_buffer *buf)
