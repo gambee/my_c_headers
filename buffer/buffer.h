@@ -7,6 +7,8 @@
  */
 
 
+#ifndef BUFFER_H
+#	define BUFFER_H //defend against duplicate includes
 
 
 /* ===================================== *
@@ -38,7 +40,7 @@
  * ------------------------------------- */
 struct BUF_node
 {
-	struct BUF_node* next; //placed in front to enforce alignment to ptr size
+	struct BUF_node* next; //placed in front for struct packing and alignment
 	char data[BUF_SIZE];
 };
 
@@ -47,8 +49,8 @@ struct BUF_node
  * ------------------------------------- */
 struct BUF_buffer
 {
-	unsigned int front_index, back_index;
 	struct BUF_node *front, *back;
+	unsigned int front_index, back_index;
 };
 
 
@@ -274,4 +276,6 @@ int BUF_print_all(struct BUF_buffer *buf)
 	return 0;
 }
 
-#endif //def BUF_DEBUG
+#endif //ifdef BUF_DEBUG
+
+#endif //ifndef BUFFER_H
