@@ -183,7 +183,7 @@ int BUF_puts(struct BUF_buffer *buf, char *str)
 	if(!buf || !str)
 		return -1; //NULL ptr(s) passed, exit in error immediately
 
-	for(i = 0, cur = str; BUF_putc(buf, *cur); i++, cur++);
+	for(i = 0, cur = str; (*cur) ? BUF_putc(buf, *cur) : 0; i++, cur++);
 
 	return i;
 }
