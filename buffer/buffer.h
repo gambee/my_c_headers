@@ -16,6 +16,9 @@
  * ===================================== */
 
 #include <stdlib.h>			//needed for memory management 
+#include <ctype.h>
+#include <stdio.h>
+
 
 /* ===================================== *
  * Section: Defines 					 *
@@ -116,6 +119,36 @@ int BUF_line_len(struct BUF_buffer *buf)
 	}
 	return (cur->data[i] == '\n') ? count : -count;
 }
+/* ------------------------------------- * 
+ * Function: BUF_len
+ * ------------------------------------- */
+int BUF_len(struct BUF_buffer *buf)
+{
+	/*	Returns the number of characters (including carriage returns,
+	 *	newlines, etc.) until the back of stream. Essentially the length of 
+	 *	the stream. The return value is one less then the size of the char
+	 *	array required to hold the entire contents of the buffer. Return
+	 *	value should always be positive, unless the buffer is empty, in
+	 *	which case it should be zero.
+	 */
+
+	struct BUF_node *cur;
+	int i, count = 0;
+
+	if(!buf)
+		return 0; //exit immediately if invalid NULL pointer is passed
+
+	cur = buf->front;
+	if(cur == buf->back)
+		count = buf->back_index - buf->front_index;
+	else
+	{
+		count = BUF_SIZE + buf->back_index - buf->front_index;
+		for(cur=cur->next; cur != buf->back; cur=cur->next)
+			count += BUF_SIZE;
+	}
+	return count;
+}
 
 /* ------------------------------------- * 
  * Function: BUF_getc
@@ -187,12 +220,6 @@ int BUF_puts(struct BUF_buffer *buf, char *str)
 
 	return i;
 }
-
-#ifdef BUF_DEBUG //then provide these functions:
-
-//debug includes:
-#include <ctype.h>
-#include <stdio.h>
 
 /* ------------------------------------- * 
  * Function: BUF_print_all
@@ -275,7 +302,5 @@ int BUF_print_all(struct BUF_buffer *buf)
 
 	return 0;
 }
-
-#endif //ifdef BUF_DEBUG
 
 #endif //ifndef BUFFER_H
